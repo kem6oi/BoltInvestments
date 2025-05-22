@@ -27,6 +27,29 @@ def create_app(config_class=None):
     # Register blueprints
     app.register_blueprint(admin_bp)
 
+    # CLI command to create admin user
+    import click
+
+    @app.cli.command("create-admin")
+    @click.argument("email")
+    @click.argument("password")
+    def create_admin_command(email, password):
+        """Creates a new admin user."""
+        # Ensure we are in app context for db operations,
+        # which is implicitly handled when commands are run via Flask CLI
+        # but good practice if this function were called from elsewhere.
+        # For CLI commands registered with @app.cli, app context is managed.
+        
+        if User.query.filter_by(email=email).first():
+            print(f"Error: User with email {email} already exists.")
+            return
+        
+        admin_user = User(email=email, is_admin=True, status='Active')
+        admin_user.set_password(password)
+        db.session.add(admin_user)
+        db.session.commit()
+        print(f"Admin user {email} created successfully.")
+
     # Create database tables if they don't exist
     # This is a simple approach for development.
     # For production, migrations (e.g., Flask-Migrate) are recommended.

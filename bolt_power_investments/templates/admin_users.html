@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }} - Admin</title>
+    <style>
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h2>{{ title }}</h2>
+    {% if users %}
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Email</th>
+                    <th>Registration Date</th>
+                    <th>Status</th>
+                    <th>Actions</th> <!-- New column -->
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>{{ user.registration_date.strftime('%Y-%m-%d %H:%M:%S') if user.registration_date else 'N/A' }}</td>
+                        <td>{{ user.status }}</td>
+                        <td>
+                            {% if user.status != 'Active' %}
+                                <a href="{{ url_for('admin.activate_user', user_id=user.id) }}">Activate</a>
+                            {% else %}
+                                <a href="{{ url_for('admin.deactivate_user', user_id=user.id) }}">Deactivate</a>
+                            {% endif %}
+                            {# TODO: Convert these to POST requests for security #}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No users found.</p>
+    {% endif %}
+    <p><a href="{{ url_for('admin.dashboard') }}">Back to Dashboard</a></p>
+</body>
+</html>
