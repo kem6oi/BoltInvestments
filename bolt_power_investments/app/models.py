@@ -19,3 +19,18 @@ class User(db.Model):
 
     def __repr__(self):
         return f'<User {self.email}>'
+
+class Invitation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(100), unique=True, nullable=False, index=True)
+    uses_left = db.Column(db.Integer, nullable=False, default=1)
+    expiration_date = db.Column(db.DateTime, nullable=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    generated_by_admin_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    # Relationship to the User who generated this invite
+    generated_by = db.relationship('User', backref=db.backref('generated_invitations', lazy='dynamic'))
+
+    def __repr__(self):
+        return f'<Invitation {self.code}>'

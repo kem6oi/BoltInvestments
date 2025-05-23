@@ -7,7 +7,7 @@ db = SQLAlchemy()
 
 # Import models and blueprints after db is defined to avoid circular imports
 # but before create_app uses them.
-from .models import User  # Ensures User model is known to SQLAlchemy via db instance
+from .models import User, Invitation  # Ensures User and Invitation models are known
 from .routes import admin_bp
 
 def create_app(config_class=None):

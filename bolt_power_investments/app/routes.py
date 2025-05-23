@@ -1,5 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from .models import User, db # Import User model and db instance
+from .models import User, db, Invitation # Import User, db, and Invitation
+import uuid
+from datetime import datetime, timedelta
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -47,6 +49,73 @@ def list_users():
 
     users = User.query.all()
     return render_template('admin_users.html', users=users, title="Manage Users")
+
+@admin_bp.route('/invites/generate', methods=['POST'])
+def generate_invitation():
+    # Placeholder for admin authentication:
+    # Replace 'admin@example.com' with the actual email of an admin user
+    # or implement proper session management.
+    admin_user = User.query.filter_by(email='admin@example.com', is_admin=True).first()
+    if not admin_user:
+        flash('Admin authentication required to generate invitation codes.', 'danger')
+        return redirect(url_for('admin.login')) # Or a more appropriate error page
+
+    uses_left = request.form.get('uses_left', default=1, type=int)
+    expiration_days = request.form.get('expiration_days', type=int, default=None)
+    expiration_date = None
+    if expiration_days is not None:
+        expiration_date = datetime.utcnow() + timedelta(days=expiration_days)
+
+    # Generate unique code
+    while True:
+        new_code = uuid.uuid4().hex[:10].upper()
+        if not Invitation.query.filter_by(code=new_code).first():
+            break
+    
+    invitation = Invitation(
+        code=new_code,
+        uses_left=uses_left,
+        expiration_date=expiration_date,
+        generated_by_admin_id=admin_user.id,
+        is_active=True # Default to active
+    )
+    
+    db.session.add(invitation)
+    db.session.commit()
+    
+    flash(f"Invitation code {new_code} generated successfully. Uses: {uses_left}, Expires: {expiration_date.strftime('%Y-%m-%d') if expiration_date else 'Never'}.", 'success')
+    # Assuming admin.list_invitations will be created next.
+    # For now, redirecting to dashboard or a placeholder.
+    return redirect(url_for('admin.list_invitations')) # Updated redirect
+
+@admin_bp.route('/invites', methods=['GET'])
+def list_invitations():
+    # Placeholder for admin authentication:
+    admin_user = User.query.filter_by(email='admin@example.com', is_admin=True).first()
+    if not admin_user:
+        flash('Admin authentication required.', 'danger')
+        return redirect(url_for('admin.login'))
+
+    invitations = Invitation.query.order_by(Invitation.created_at.desc()).all()
+    return render_template('admin_invites.html',
+                           invitations=invitations,
+                           title="Manage Invitation Codes",
+                           now_utc=datetime.utcnow())
+
+@admin_bp.route('/invites/<int:invite_id>/revoke', methods=['GET']) # TODO: Change to POST & add CSRF
+def revoke_invitation(invite_id):
+    # TODO: Implement proper admin authentication check here
+    # Using the same placeholder as other admin routes for now
+    admin_user = User.query.filter_by(email='admin@example.com', is_admin=True).first()
+    if not admin_user:
+        flash("Admin access required.", "danger")
+        return redirect(url_for('admin.login'))
+
+    invitation = Invitation.query.get_or_404(invite_id)
+    invitation.is_active = False
+    db.session.commit()
+    flash(f"Invitation code {invitation.code} has been revoked.", 'success')
+    return redirect(url_for('admin.list_invitations'))
 
 @admin_bp.route('/users/<int:user_id>/activate', methods=['GET']) # TODO: Change to POST and add CSRF
 def activate_user(user_id):
